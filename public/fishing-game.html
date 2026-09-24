@@ -1,0 +1,1685 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>เกมหมอแดรกคูล่าจับของคลินิก 2D (Doctor Clinic Game)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+    body {
+      background: #07030e;
+      color: #fff;
+      font-family: 'Prompt', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    #game-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      max-width: 480px;
+      max-height: 900px;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 10%, #1e0d38 0%, #110726 45%, #05020a 100%);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.85);
+    }
+    @media (min-width: 520px) {
+      #game-container {
+        border-radius: 32px;
+        height: 92vh;
+        border: 3px solid #7c3aed60;
+        box-shadow: 0 0 35px rgba(234, 88, 12, 0.25), 0 25px 60px rgba(0,0,0,0.9);
+      }
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      cursor: crosshair;
+    }
+    /* Top In-Game HUD - Ultra Compact & Slim to not obscure Dracula */
+    .hud-top {
+      position: absolute;
+      top: 8px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+      z-index: 10;
+      gap: 6px;
+    }
+    .hud-card {
+      background: rgba(15, 7, 30, 0.92);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(249, 115, 22, 0.4);
+      border-radius: 12px;
+      padding: 4px 10px;
+      display: flex;
+      flex-direction: row;
+      gap: 6px;
+      align-items: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+    }
+    .hud-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #fb923c;
+      letter-spacing: 0.5px;
+    }
+    .hud-value {
+      font-size: 14px;
+      font-weight: 900;
+      line-height: 1;
+      color: #ffffff;
+      font-variant-numeric: tabular-nums;
+    }
+    .hud-value.gold {
+      color: #facc15;
+      text-shadow: 0 0 8px rgba(250, 204, 21, 0.5);
+    }
+    .hud-value.green {
+      color: #6ee7b7;
+    }
+    .hud-value.timer-warn {
+      color: #f43f5e;
+      text-shadow: 0 0 10px rgba(244, 63, 94, 0.7);
+      animation: pulse 1s infinite;
+    }
+    .sound-btn {
+      pointer-events: auto;
+      width: 28px;
+      height: 28px;
+      border-radius: 10px;
+      background: rgba(15, 7, 30, 0.92);
+      border: 1px solid rgba(249, 115, 22, 0.4);
+      color: #fb923c;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 19px;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      transition: transform 0.15s ease;
+    }
+    .sound-btn:active {
+      transform: scale(0.9);
+    }
+
+    /* Modals */
+    .modal-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(7, 3, 14, 0.92);
+      backdrop-filter: blur(8px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      z-index: 25;
+      transition: opacity 0.25s ease;
+    }
+    .modal-card {
+      background: #0f0722;
+      border: 2px solid rgba(249, 115, 22, 0.5);
+      border-radius: 28px;
+      padding: 24px;
+      width: 100%;
+      max-width: 330px;
+      text-align: center;
+      box-shadow: 0 0 40px rgba(249, 115, 22, 0.25);
+      animation: modalPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .modal-icon {
+      font-size: 46px;
+      margin-bottom: 8px;
+      display: inline-block;
+      animation: bounce 1.8s infinite;
+    }
+    .modal-title {
+      font-size: 22px;
+      font-weight: 900;
+      background: linear-gradient(135deg, #fb923c, #f43f5e, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 4px;
+    }
+    .modal-desc {
+      font-size: 12px;
+      color: #fdba74;
+      margin-bottom: 14px;
+      line-height: 1.4;
+    }
+    .rules-box {
+      background: rgba(20, 10, 40, 0.8);
+      border: 1px solid rgba(192, 132, 252, 0.2);
+      border-radius: 16px;
+      padding: 10px 12px;
+      font-size: 11.5px;
+      text-align: left;
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .rule-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #e2e8f0;
+    }
+    .pts-10 { color: #c084fc; font-weight: 700; }
+    .pts-30 { color: #facc15; font-weight: 700; }
+    .pts-50 { color: #38bdf8; font-weight: 800; }
+    .pts-minus { color: #f43f5e; font-weight: 700; }
+
+    .btn-action {
+      width: 100%;
+      padding: 14px 20px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #f97316, #e11d48, #9333ea);
+      border: none;
+      color: #ffffff;
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: 900;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 8px 25px rgba(249, 115, 22, 0.35);
+      transition: all 0.2s ease;
+    }
+    .btn-action:active {
+      transform: scale(0.96);
+    }
+    .score-banner {
+      background: rgba(249, 115, 22, 0.12);
+      border: 1.5px solid rgba(249, 115, 22, 0.35);
+      border-radius: 16px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .score-banner-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #fdba74;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .score-banner-value {
+      font-size: 40px;
+      font-weight: 900;
+      color: #facc15;
+      line-height: 1;
+      margin: 4px 0;
+    }
+    .gameover-badge {
+      display: inline-block;
+      padding: 3px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      background: rgba(249, 115, 22, 0.2);
+      border: 1px solid rgba(249, 115, 22, 0.5);
+      color: #fdba74;
+    }
+    .hint-tap {
+      position: absolute;
+      bottom: 20px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      pointer-events: none;
+      z-index: 5;
+      animation: float 2s infinite ease-in-out;
+    }
+    .hint-bubble {
+      background: rgba(15, 7, 30, 0.85);
+      border: 1px solid rgba(249, 115, 22, 0.35);
+      color: #fed7aa;
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 20px;
+      display: inline-block;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.08); opacity: 0.85; }
+    }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+    @keyframes modalPop {
+      0% { transform: scale(0.9); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="game-container">
+    <!-- Top HUD (Clean without lives/hearts) -->
+    <div class="hud-top">
+      <div class="hud-card">
+        <span class="hud-label">คะแนนรวม</span>
+        <span class="hud-value gold" id="hud-score">0</span>
+      </div>
+
+      <div class="hud-card">
+        <span class="hud-label" style="color: #6ee7b7;">จับได้แล้ว</span>
+        <span class="hud-value green" id="hud-caught">0</span>
+      </div>
+
+      <div class="hud-card">
+        <span class="hud-label">เวลา</span>
+        <span class="hud-value" id="hud-timer">60s</span>
+      </div>
+
+      <button class="sound-btn" id="btn-sound" title="เปิด/ปิดเสียง">🔊</button>
+    </div>
+
+    <!-- Canvas -->
+    <canvas id="canvas"></canvas>
+
+    <!-- Tap Hint -->
+    <div class="hint-tap" id="hint-tap" style="display: none;">
+      <span class="hint-bubble">🧛 แตะเพื่อหย่อนมือกล • หลบผีลอยอยู่ (-10)</span>
+    </div>
+
+    <!-- Start Modal -->
+    <div class="modal-overlay" id="start-modal">
+      <div class="modal-card">
+        <div class="modal-icon">🧛‍♂️</div>
+        <h1 class="modal-title">หมอแดรกคูล่าจับของคลินิก</h1>
+        <p class="modal-desc">หย่อนมือกลจับอุปกรณ์เสริมความงามในคลินิก ระวังผีหลอก!</p>
+
+        <div class="rules-box">
+          <div class="rule-item">
+            <span>💉 กล่อง Botox Reva</span>
+            <span class="pts-10">+10 คะแนน</span>
+          </div>
+          <div class="rule-item">
+            <span>✨ กล่อง Filler Reva</span>
+            <span class="pts-30">+30 คะแนน</span>
+          </div>
+          <div class="rule-item">
+            <span>⚡ เลเซอร์ Ultherapy</span>
+            <span class="pts-50">+50 คะแนน</span>
+          </div>
+          <div class="rule-item" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 5px;">
+            <span>👻 ผีลอยไปมา</span>
+            <span class="pts-minus">หัก -10 คะแนน</span>
+          </div>
+          <div class="rule-item">
+            <span>🎃 ฟักทองฮาโลวีน</span>
+            <span class="pts-minus" style="color: #fb923c;">หัก -50 คะแนน</span>
+          </div>
+          <div class="rule-item">
+            <span>🧙‍♀️ แม่มดบินไวๆ</span>
+            <span class="pts-minus" style="color: #f43f5e; font-weight: 900;">หัก -100 คะแนน</span>
+          </div>
+        </div>
+
+        <button class="btn-action" id="btn-start">
+          <span>✨</span>
+          <span>เริ่มเล่นเกม (60 วิ)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div class="modal-overlay" id="gameover-modal" style="display: none;">
+      <div class="modal-card">
+        <div class="modal-icon">🏆</div>
+        <h2 class="modal-title">หมดเวลา 60 วินาที!</h2>
+        <div class="gameover-badge">สรุปผลงานคืนนี้</div>
+
+        <div class="score-banner">
+          <div class="score-banner-label">คะแนนรวมที่ได้</div>
+          <div class="score-banner-value" id="go-score">0</div>
+          <div style="font-size: 11.5px; color: #fde047; font-weight: 700;" id="go-highscore">สถิติสูงสุด: 0 คะแนน</div>
+        </div>
+
+        <div class="rules-box">
+          <div class="rule-item">
+            <span>💉 กล่อง Botox Reva (+10):</span>
+            <span class="pts-10" id="stat-botox">0 กล่อง</span>
+          </div>
+          <div class="rule-item">
+            <span>✨ กล่อง Filler Reva (+30):</span>
+            <span class="pts-30" id="stat-filler">0 กล่อง</span>
+          </div>
+          <div class="rule-item">
+            <span>⚡ เลเซอร์ Ultherapy (+50):</span>
+            <span class="pts-50" id="stat-laser">0 เครื่อง</span>
+          </div>
+          <div class="rule-item" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 5px;">
+            <span>👻 โดนผี (-10):</span>
+            <span class="pts-minus" id="stat-ghost">0 ครั้ง</span>
+          </div>
+          <div class="rule-item">
+            <span>🎃 ฟักทอง (-50):</span>
+            <span class="pts-minus" style="color: #fb923c;" id="stat-pumpkin">0 ครั้ง</span>
+          </div>
+          <div class="rule-item">
+            <span>🧙‍♀️ แม่มดบินไว (-100):</span>
+            <span class="pts-minus" style="color: #f43f5e;" id="stat-witch">0 ครั้ง</span>
+          </div>
+        </div>
+
+        <button class="btn-action" id="btn-restart">
+          <span>🔄</span>
+          <span>เล่นใหม่อีกรอบ</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ========================================================
+       Spooky Audio Synthesizer (Web Audio API)
+       ======================================================== */
+    class ClinicSynth {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      playDrop() {
+        if (this.muted || !this.ctx) return;
+        try {
+          const t = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(520, t);
+          osc.frequency.exponentialRampToValueAtTime(180, t + 0.28);
+          gain.gain.setValueAtTime(0.2, t);
+          gain.gain.linearRampToValueAtTime(0.001, t + 0.28);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.28);
+        } catch(e) {}
+      }
+      playCapture(type) {
+        if (this.muted || !this.ctx) return;
+        try {
+          const t = this.ctx.currentTime;
+          if (type === 'laser') {
+            const bells = [659, 830, 987, 1318, 1661];
+            bells.forEach((freq, idx) => {
+              setTimeout(() => {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, now);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.35);
+              }, idx * 60);
+            });
+            return;
+          }
+          if (type === 'filler') {
+            const notes = [523, 659, 783, 1046];
+            notes.forEach((freq, idx) => {
+              setTimeout(() => {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, now);
+                gain.gain.setValueAtTime(0.18, now);
+                gain.gain.linearRampToValueAtTime(0.001, now + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.25);
+              }, idx * 65);
+            });
+            return;
+          }
+          // Botox
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(587, t);
+          osc.frequency.exponentialRampToValueAtTime(880, t + 0.2);
+          gain.gain.setValueAtTime(0.2, t);
+          gain.gain.linearRampToValueAtTime(0.001, t + 0.2);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.2);
+        } catch(e) {}
+      }
+      playDeliver() {
+        if (this.muted || !this.ctx) return;
+        try {
+          const t = this.ctx.currentTime;
+          const notes = [523.25, 659.25, 783.99];
+          notes.forEach((freq, i) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, t + i * 0.05);
+            gain.gain.setValueAtTime(0.15, t + i * 0.05);
+            gain.gain.linearRampToValueAtTime(0.001, t + i * 0.05 + 0.16);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t + i * 0.05);
+            osc.stop(t + i * 0.05 + 0.16);
+          });
+        } catch(e) {}
+      }
+      playHitGhost() {
+        if (this.muted || !this.ctx) return;
+        try {
+          const t = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(260, t);
+          osc.frequency.linearRampToValueAtTime(85, t + 0.32);
+          gain.gain.setValueAtTime(0.25, t);
+          gain.gain.linearRampToValueAtTime(0.001, t + 0.32);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.32);
+        } catch(e) {}
+      }
+      playHitPumpkin() {
+        if (this.muted || !this.ctx) return;
+        try {
+          const t = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(220, t);
+          osc.frequency.exponentialRampToValueAtTime(70, t + 0.35);
+          gain.gain.setValueAtTime(0.25, t);
+          gain.gain.linearRampToValueAtTime(0.001, t + 0.35);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.35);
+        } catch(e) {}
+      }
+      playHitWitch() {
+        if (this.muted || !this.ctx) return;
+        try {
+          const t = this.ctx.currentTime;
+          const osc1 = this.ctx.createOscillator();
+          const osc2 = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc1.type = 'sawtooth';
+          osc2.type = 'square';
+          osc1.frequency.setValueAtTime(880, t);
+          osc1.frequency.exponentialRampToValueAtTime(200, t + 0.45);
+          osc2.frequency.setValueAtTime(940, t);
+          osc2.frequency.exponentialRampToValueAtTime(190, t + 0.45);
+          gain.gain.setValueAtTime(0.3, t);
+          gain.gain.linearRampToValueAtTime(0.001, t + 0.45);
+          osc1.connect(gain);
+          osc2.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc1.start(t);
+          osc2.start(t);
+          osc1.stop(t + 0.45);
+          osc2.stop(t + 0.45);
+        } catch(e) {}
+      }
+      playMissionEnd() {
+        if (this.muted || !this.ctx) return;
+        try {
+          const notes = [440, 554, 659, 880];
+          notes.forEach((freq, idx) => {
+            setTimeout(() => {
+              if (this.muted || !this.ctx) return;
+              const now = this.ctx.currentTime;
+              const osc = this.ctx.createOscillator();
+              const gain = this.ctx.createGain();
+              osc.type = 'triangle';
+              osc.frequency.setValueAtTime(freq, now);
+              gain.gain.setValueAtTime(0.2, now);
+              gain.gain.linearRampToValueAtTime(0.001, now + 0.3);
+              osc.connect(gain);
+              gain.connect(this.ctx.destination);
+              osc.start(now);
+              osc.stop(now + 0.3);
+            }, idx * 110);
+          });
+        } catch(e) {}
+      }
+    }
+
+    const audio = new ClinicSynth();
+
+    /* ========================================================
+       Game Logic & Canvas Setup
+       ======================================================== */
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const container = document.getElementById('game-container');
+
+    const hudScore = document.getElementById('hud-score');
+    const hudCaught = document.getElementById('hud-caught');
+    const hudTimer = document.getElementById('hud-timer');
+    const btnSound = document.getElementById('btn-sound');
+    const hintTap = document.getElementById('hint-tap');
+    const startModal = document.getElementById('start-modal');
+    const gameoverModal = document.getElementById('gameover-modal');
+    const btnStart = document.getElementById('btn-start');
+    const btnRestart = document.getElementById('btn-restart');
+
+    const goScore = document.getElementById('go-score');
+    const goHighScore = document.getElementById('go-highscore');
+    const statBotox = document.getElementById('stat-botox');
+    const statFiller = document.getElementById('stat-filler');
+    const statLaser = document.getElementById('stat-laser');
+    const statGhost = document.getElementById('stat-ghost');
+    const statPumpkin = document.getElementById('stat-pumpkin');
+    const statWitch = document.getElementById('stat-witch');
+
+    let isPlaying = false;
+    let score = 0;
+    let timeLeft = 60;
+    let timerInterval = null;
+    let highScore = parseInt(localStorage.getItem('clinic_halloween_fishing_highscore') || '0', 10);
+
+    let counts = { botox: 0, filler: 0, laser: 0, ghost: 0, pumpkin: 0, witch: 0 };
+    let width = 360;
+    let height = 640;
+    let ledgeY = 120;
+    let globalTime = 0;
+
+    const doctor = {
+      x: 180,
+      targetX: 180,
+      y: 84,
+      width: 62,
+      height: 60,
+      tilt: 0,
+      capePhase: 0,
+      damageFlash: 0
+    };
+
+    const tether = {
+      x: 180,
+      y: 120,
+      state: 'idle',
+      extendSpeed: 560,
+      retractSpeed: 490,
+      pulse: 0,
+      caughtItem: null
+    };
+
+    let items = [];
+    let obstacles = [];
+    let particles = [];
+    let texts = [];
+    let wisps = [];
+
+    // Resize Handler
+    function resize() {
+      const rect = container.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      width = rect.width;
+      height = rect.height;
+      ledgeY = 120;
+      doctor.y = 84;
+
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      ctx.resetTransform();
+      ctx.scale(dpr, dpr);
+
+      // Create wisps
+      wisps = [];
+      for (let i = 0; i < 35; i++) {
+        wisps.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          size: Math.random() * 2.8 + 1,
+          alpha: Math.random() * 0.7 + 0.2,
+          speed: Math.random() * 16 + 10,
+          phase: Math.random() * Math.PI * 2
+        });
+      }
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Create Clinic Item (Botox: 10, Filler: 30, Laser: 50)
+    function createClinicItem() {
+      const roll = Math.random();
+      let type = 'botox';
+      let points = 10;
+      let sizeW = 36;
+      let sizeH = 34;
+      let speed = Math.random() * 35 + 50;
+      let minY = ledgeY + 40;
+      let maxY = height - 55;
+
+      if (roll < 0.22) {
+        // Laser Ultherapy: 50 pts
+        type = 'laser';
+        points = 50;
+        sizeW = 48;
+        sizeH = 50;
+        speed = Math.random() * 35 + 85;
+        minY = ledgeY + (height - ledgeY) * 0.35;
+        maxY = height - 45;
+      } else if (roll < 0.55) {
+        // Filler Reva: 30 pts
+        type = 'filler';
+        points = 30;
+        sizeW = 48;
+        sizeH = 34;
+        speed = Math.random() * 30 + 55;
+        minY = ledgeY + (height - ledgeY) * 0.2;
+      } else {
+        // Botox Reva & Vial: 10 pts
+        type = 'botox';
+        points = 10;
+        sizeW = 44;
+        sizeH = 40;
+        speed = Math.random() * 35 + 50;
+        maxY = ledgeY + (height - ledgeY) * 0.8;
+      }
+
+      const dir = Math.random() > 0.5 ? 1 : -1;
+      const x = dir === 1 ? -sizeW - 25 : width + sizeW + 25;
+      const y = Math.random() * (maxY - minY) + minY;
+
+      return {
+        id: Math.random(),
+        type,
+        points,
+        w: sizeW,
+        h: sizeH,
+        x,
+        y,
+        dir,
+        speed,
+        baseY: y,
+        wiggleFreq: type === 'laser' ? Math.random() * 2 + 2 : Math.random() * 3.5 + 3,
+        phase: Math.random() * Math.PI * 2,
+        caught: false
+      };
+    }
+
+    // Create Obstacle: Ghost (-10), Pumpkin (-50), Witch (-100, fast flying)
+    function createObstacle(type = 'ghost') {
+      const dir = Math.random() > 0.5 ? 1 : -1;
+      let points = -10;
+      let sizeW = 38;
+      let sizeH = 40;
+      let speed = Math.random() * 30 + 45;
+      let wiggleFreq = Math.random() * 3 + 4;
+
+      if (type === 'witch') {
+        // Fast flying witch (-100)
+        points = -100;
+        sizeW = 62;
+        sizeH = 44;
+        speed = Math.random() * 65 + 160; // flies fast!
+        wiggleFreq = Math.random() * 2 + 5;
+      } else if (type === 'pumpkin') {
+        // Pumpkin (-50)
+        points = -50;
+        sizeW = 42;
+        sizeH = 38;
+        speed = Math.random() * 30 + 40;
+        wiggleFreq = Math.random() * 2 + 3;
+      }
+
+      const x = dir === 1 ? -sizeW - 35 : width + sizeW + 35;
+      const y = Math.random() * (height - ledgeY - 110) + ledgeY + 45;
+
+      return {
+        id: Math.random(),
+        type,
+        points,
+        w: sizeW,
+        h: sizeH,
+        x,
+        y,
+        dir,
+        speed,
+        baseY: y,
+        phase: Math.random() * Math.PI * 2,
+        wiggleFreq,
+        caught: false
+      };
+    }
+
+    function updateCaughtHUD() {
+      const total = counts.botox + counts.filler + counts.laser;
+      hudCaught.textContent = total;
+    }
+
+    // Start Game
+    function startGame() {
+      audio.init();
+      score = 0;
+      timeLeft = 60;
+      counts = { botox: 0, filler: 0, laser: 0, ghost: 0 };
+
+      hudScore.textContent = '0';
+      hudCaught.textContent = '0';
+      hudTimer.textContent = '60s';
+      hudTimer.className = 'hud-value';
+
+      startModal.style.display = 'none';
+      gameoverModal.style.display = 'none';
+      hintTap.style.display = 'block';
+
+      doctor.x = width * 0.5;
+      doctor.targetX = width * 0.5;
+      doctor.damageFlash = 0;
+
+      tether.x = width * 0.5;
+      tether.y = ledgeY;
+      tether.state = 'idle';
+      tether.caughtItem = null;
+
+      items = [];
+      ghosts = [];
+      particles = [];
+      texts = [];
+
+      for (let i = 0; i < 8; i++) {
+        const it = createClinicItem();
+        it.x = Math.random() * width;
+        items.push(it);
+      }
+      for (let i = 0; i < 4; i++) {
+        const g = createGhostObstacle();
+        g.x = Math.random() * width;
+        ghosts.push(g);
+      }
+
+      isPlaying = true;
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        hudTimer.textContent = timeLeft + 's';
+
+        if (timeLeft <= 10) {
+          hudTimer.className = 'hud-value timer-warn';
+        }
+
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          triggerGameOver();
+        }
+      }, 1000);
+    }
+
+    // Trigger Game Over strictly at 60s
+    function triggerGameOver() {
+      if (!isPlaying) return;
+      isPlaying = false;
+      clearInterval(timerInterval);
+      hintTap.style.display = 'none';
+
+      audio.playMissionEnd();
+      goScore.textContent = score;
+      if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('clinic_halloween_fishing_highscore', highScore.toString());
+      }
+      goHighScore.textContent = `สถิติสูงสุด: ${highScore} คะแนน`;
+
+      statBotox.textContent = `${counts.botox} กล่อง`;
+      statFiller.textContent = `${counts.filler} กล่อง`;
+      statLaser.textContent = `${counts.laser} เครื่อง`;
+      statGhost.textContent = `${counts.ghost} ครั้ง`;
+
+      gameoverModal.style.display = 'flex';
+    }
+
+    // Input handlers
+    function handlePointer(clientX) {
+      if (!isPlaying) return;
+      const rect = canvas.getBoundingClientRect();
+      const touchX = clientX - rect.left;
+      doctor.targetX = Math.max(35, Math.min(rect.width - 35, touchX));
+
+      if (tether.state === 'idle') {
+        tether.state = 'extending';
+        audio.playDrop();
+      } else if (tether.state === 'extending' && !tether.caughtItem) {
+        tether.state = 'retracting';
+      }
+    }
+
+    canvas.addEventListener('pointerdown', (e) => handlePointer(e.clientX));
+    canvas.addEventListener('pointermove', (e) => {
+      if (!isPlaying) return;
+      const rect = canvas.getBoundingClientRect();
+      doctor.targetX = Math.max(35, Math.min(rect.width - 35, e.clientX - rect.left));
+    });
+
+    // Sound toggle
+    btnSound.addEventListener('click', (e) => {
+      e.stopPropagation();
+      audio.init();
+      audio.muted = !audio.muted;
+      btnSound.textContent = audio.muted ? '🔇' : '🔊';
+    });
+
+    btnStart.addEventListener('click', startGame);
+    btnRestart.addEventListener('click', startGame);
+
+    /* ========================================================
+       Main Render Loop
+       ======================================================== */
+    let lastTime = performance.now();
+
+    function render(now) {
+      const dt = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
+      globalTime += dt;
+
+      // 1. Spooky Night Sky Background
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
+      skyGrad.addColorStop(0, '#0a0618');
+      skyGrad.addColorStop(0.35, '#130c2a');
+      skyGrad.addColorStop(0.7, '#1b0e38');
+      skyGrad.addColorStop(1, '#070312');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, width, height);
+
+      // Harvest Moon
+      const moonX = width * 0.78;
+      const moonY = 66;
+      const moonR = 36;
+
+      const moonGlow = ctx.createRadialGradient(moonX, moonY, 12, moonX, moonY, 85);
+      moonGlow.addColorStop(0, 'rgba(251, 146, 60, 0.38)');
+      moonGlow.addColorStop(0.5, 'rgba(245, 158, 11, 0.14)');
+      moonGlow.addColorStop(1, 'transparent');
+      ctx.fillStyle = moonGlow;
+      ctx.beginPath();
+      ctx.arc(moonX, moonY, 85, 0, Math.PI * 2);
+      ctx.fill();
+
+      const moonBody = ctx.createRadialGradient(moonX - 7, moonY - 7, 5, moonX, moonY, moonR);
+      moonBody.addColorStop(0, '#fef08a');
+      moonBody.addColorStop(0.7, '#f59e0b');
+      moonBody.addColorStop(1, '#d97706');
+      ctx.fillStyle = moonBody;
+      ctx.beginPath();
+      ctx.arc(moonX, moonY, moonR, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Moon craters
+      ctx.fillStyle = 'rgba(180, 83, 9, 0.25)';
+      ctx.beginPath();
+      ctx.arc(moonX - 10, moonY - 6, 7, 0, Math.PI * 2);
+      ctx.arc(moonX + 12, moonY + 8, 9, 0, Math.PI * 2);
+      ctx.arc(moonX - 4, moonY + 16, 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Flying Bat
+      const batPhase = globalTime * 3;
+      const flyingBatX = ((globalTime * 45) % (width + 100)) - 50;
+      const flyingBatY = 55 + Math.sin(batPhase) * 12;
+      ctx.fillStyle = '#110928';
+      ctx.beginPath();
+      ctx.ellipse(flyingBatX, flyingBatY, 6, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      const wingFlap = Math.sin(batPhase * 4) * 8;
+      ctx.beginPath();
+      ctx.moveTo(flyingBatX - 6, flyingBatY);
+      ctx.quadraticCurveTo(flyingBatX - 14, flyingBatY - 10 + wingFlap, flyingBatX - 16, flyingBatY + wingFlap);
+      ctx.lineTo(flyingBatX - 4, flyingBatY + 2);
+      ctx.moveTo(flyingBatX + 6, flyingBatY);
+      ctx.quadraticCurveTo(flyingBatX + 14, flyingBatY - 10 + wingFlap, flyingBatX + 16, flyingBatY + wingFlap);
+      ctx.lineTo(flyingBatX + 4, flyingBatY + 2);
+      ctx.fill();
+
+      // Background wisps
+      for (const wisp of wisps) {
+        ctx.fillStyle = `rgba(192, 132, 252, ${wisp.alpha * (0.6 + Math.sin(globalTime * 2 + wisp.phase) * 0.4)})`;
+        ctx.beginPath();
+        ctx.arc(wisp.x, wisp.y, wisp.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Ground Silhouette
+      ctx.fillStyle = '#06020c';
+      ctx.beginPath();
+      ctx.moveTo(0, height);
+      ctx.lineTo(0, height - 35);
+      ctx.lineTo(width * 0.2, height - 38);
+      ctx.lineTo(width * 0.4, height - 30);
+      ctx.lineTo(width * 0.7, height - 36);
+      ctx.lineTo(width, height - 32);
+      ctx.lineTo(width, height);
+      ctx.closePath();
+      ctx.fill();
+
+      // Balcony for Doctor
+      ctx.fillStyle = '#120b26';
+      ctx.fillRect(0, 0, width, ledgeY - 2);
+      ctx.fillStyle = '#1e143b';
+      ctx.fillRect(0, ledgeY - 14, width, 12);
+      ctx.fillStyle = '#f97316';
+      ctx.fillRect(0, ledgeY - 2, width, 2);
+      ctx.fillStyle = '#312059';
+      for (let bx = 15; bx < width; bx += 40) {
+        ctx.fillRect(bx, ledgeY - 12, 14, 8);
+      }
+
+      // 2. Logic Update
+      if (isPlaying) {
+        const dx = doctor.targetX - doctor.x;
+        doctor.x += dx * 0.14;
+        doctor.tilt = Math.max(-0.2, Math.min(0.2, dx * 0.005));
+        doctor.capePhase += dt * 8;
+        if (doctor.damageFlash > 0) {
+          doctor.damageFlash = Math.max(0, doctor.damageFlash - dt);
+        }
+
+        // Tether
+        tether.pulse += dt * 10;
+        const emitterX = doctor.x;
+
+        if (tether.state === 'idle') {
+          tether.x = emitterX;
+          tether.y = ledgeY;
+        } else if (tether.state === 'extending') {
+          tether.x = emitterX;
+          tether.y += tether.extendSpeed * dt;
+
+          if (tether.y >= height - 25) {
+            tether.y = height - 25;
+            tether.state = 'retracting';
+          }
+
+          // Check Clinic Items Collision (Botox, Filler, Laser)
+          if (!tether.caughtItem) {
+            for (let i = 0; i < items.length; i++) {
+              const it = items[i];
+              if (it.caught) continue;
+              const dist = Math.hypot(tether.x - it.x, tether.y - it.y);
+              if (dist < 18 + it.w * 0.42) {
+                it.caught = true;
+                tether.caughtItem = { type: 'item', data: it };
+                tether.state = 'retracting';
+                audio.playCapture(it.type);
+                break;
+              }
+            }
+          }
+
+          // Check Ghost Obstacles Collision (👻 ผี -10 คะแนน)
+          if (!tether.caughtItem) {
+            for (let i = 0; i < ghosts.length; i++) {
+              const g = ghosts[i];
+              if (g.caught) continue;
+              const dist = Math.hypot(tether.x - g.x, tether.y - g.y);
+              if (dist < 18 + g.w * 0.4) {
+                g.caught = true;
+                tether.caughtItem = { type: 'ghost', data: g };
+                tether.state = 'retracting';
+                audio.playHitGhost();
+                break;
+              }
+            }
+          }
+        } else if (tether.state === 'retracting') {
+          tether.x = emitterX;
+          tether.y -= tether.retractSpeed * dt;
+
+          if (tether.caughtItem) {
+            tether.caughtItem.data.x = tether.x;
+            tether.caughtItem.data.y = tether.y + 16;
+          }
+
+          if (tether.y <= ledgeY) {
+            tether.y = ledgeY;
+            tether.state = 'idle';
+
+            if (tether.caughtItem) {
+              if (tether.caughtItem.type === 'item') {
+                const it = tether.caughtItem.data;
+                score += it.points;
+                counts[it.type]++;
+                audio.playDeliver();
+                hudScore.textContent = score;
+                updateCaughtHUD();
+
+                const c = it.type === 'laser' ? '#38bdf8' : it.type === 'filler' ? '#38bdf8' : '#0ea5e9';
+                const label = it.type === 'laser' ? `⚡ เลเซอร์ Ultherapy +${it.points}` : it.type === 'filler' ? `✨ Filler Reva +${it.points}` : `💉 Botox Reva +${it.points}`;
+                texts.push({ text: label, x: tether.x, y: ledgeY - 20, color: c, life: 1.0 });
+
+                for (let k = 0; k < (it.type === 'laser' ? 24 : 14); k++) {
+                  particles.push({
+                    x: tether.x,
+                    y: ledgeY,
+                    vx: (Math.random() - 0.5) * 160,
+                    vy: (Math.random() - 0.5) * 100 - 30,
+                    color: c,
+                    size: Math.random() * 3 + 2,
+                    life: 1.0,
+                    decay: 1.4
+                  });
+                }
+                items = items.filter(x => x.id !== it.id);
+              } else if (tether.caughtItem.type === 'ghost') {
+                const g = tether.caughtItem.data;
+                score = Math.max(0, score - 10);
+                counts.ghost++;
+                doctor.damageFlash = 0.5;
+                hudScore.textContent = score;
+                audio.playHitGhost();
+
+                for (let k = 0; k < 18; k++) {
+                  particles.push({
+                    x: tether.x,
+                    y: ledgeY,
+                    vx: (Math.random() - 0.5) * 150,
+                    vy: (Math.random() - 0.5) * 100 - 20,
+                    color: '#a855f7',
+                    size: Math.random() * 3 + 2,
+                    life: 1.0,
+                    decay: 2.0
+                  });
+                }
+                ghosts = ghosts.filter(x => x.id !== g.id);
+                texts.push({ text: 'โดนผี! โดนหัก 10 คะแนน', x: tether.x, y: ledgeY - 22, color: '#ef4444', life: 1.3 });
+              }
+              tether.caughtItem = null;
+            }
+          }
+        }
+
+        // Update items
+        for (const it of items) {
+          if (it.caught) continue;
+          it.x += it.speed * it.dir * dt;
+          it.y = it.baseY + Math.sin(globalTime * it.wiggleFreq + it.phase) * 6;
+
+          if (it.dir === 1 && it.x > width + it.w + 25) {
+            it.x = -it.w - 25;
+            it.baseY = Math.random() * (height - ledgeY - 90) + ledgeY + 45;
+          } else if (it.dir === -1 && it.x < -it.w - 25) {
+            it.x = width + it.w + 25;
+            it.baseY = Math.random() * (height - ledgeY - 90) + ledgeY + 45;
+          }
+        }
+        while (items.length < 8) items.push(createClinicItem());
+
+        // Update ghosts
+        for (const g of ghosts) {
+          if (g.caught) continue;
+          g.x += g.speed * g.dir * dt;
+          g.y = g.baseY + Math.sin(globalTime * g.wiggleFreq + g.phase) * 8;
+
+          if (g.dir === 1 && g.x > width + g.w + 25) {
+            g.x = -g.w - 25;
+            g.baseY = Math.random() * (height - ledgeY - 95) + ledgeY + 45;
+          } else if (g.dir === -1 && g.x < -g.w - 25) {
+            g.x = width + g.w + 25;
+            g.baseY = Math.random() * (height - ledgeY - 95) + ledgeY + 45;
+          }
+        }
+        while (ghosts.length < 4) ghosts.push(createGhostObstacle());
+
+        // Particles
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          p.life -= p.decay * dt;
+          if (p.life <= 0) particles.splice(i, 1);
+        }
+
+        // Texts
+        for (let i = texts.length - 1; i >= 0; i--) {
+          const t = texts[i];
+          t.y -= 38 * dt;
+          t.life -= 1.2 * dt;
+          if (t.life <= 0) texts.splice(i, 1);
+        }
+      }
+
+      // 3. Draw Clinic Items (Botox, Filler, Laser)
+      for (const it of items) {
+        ctx.save();
+        ctx.translate(it.x, it.y);
+        if (it.dir === -1) ctx.scale(-1, 1);
+
+        if (it.type === 'laser') {
+          // ⚡ เครื่องยกกระชับ & เลเซอร์คลินิก (Ultherapy Aesthetic Cart Machine) - 50 คะแนน
+          const lw = it.w, lh = it.h;
+          ctx.shadowColor = '#38bdf8';
+          ctx.shadowBlur = 12;
+
+          // 1. Lower Medical Cart Stand & Drawer
+          ctx.fillStyle = '#cbd5e1';
+          ctx.beginPath();
+          ctx.roundRect(-lw * 0.35, lh * 0.18, lw * 0.7, lh * 0.26, 4);
+          ctx.fill();
+          ctx.fillStyle = '#94a3b8';
+          ctx.beginPath();
+          ctx.roundRect(-lw * 0.2, lh * 0.21, lw * 0.4, 3, 1.5);
+          ctx.fill();
+
+          // Central Support Pillar
+          ctx.fillStyle = '#94a3b8';
+          ctx.fillRect(-lw * 0.1, -lh * 0.04, lw * 0.2, lh * 0.23);
+
+          // Wraparound Cart Handle Bar
+          ctx.strokeStyle = '#e2e8f0';
+          ctx.lineWidth = 2.5;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(-lw * 0.44, -lh * 0.05);
+          ctx.lineTo(-lw * 0.46, lh * 0.06);
+          ctx.lineTo(lw * 0.44, lh * 0.06);
+          ctx.stroke();
+
+          // 2. Main Console Base
+          ctx.fillStyle = '#e2e8f0';
+          ctx.beginPath();
+          ctx.roundRect(-lw * 0.4, -lh * 0.16, lw * 0.8, lh * 0.24, [4, 4, 8, 8]);
+          ctx.fill();
+
+          ctx.fillStyle = '#f8fafc';
+          ctx.beginPath();
+          ctx.moveTo(-lw * 0.36, -lh * 0.14);
+          ctx.lineTo(-lw * 0.32, -lh * 0.46);
+          ctx.lineTo(lw * 0.32, -lh * 0.46);
+          ctx.lineTo(lw * 0.36, -lh * 0.14);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.fillStyle = '#cbd5e1';
+          ctx.fillRect(-lw * 0.36, -lh * 0.03, lw * 0.72, lh * 0.09);
+
+          ctx.fillStyle = '#64748b';
+          ctx.beginPath();
+          ctx.arc(-lw * 0.14, 0, 3, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#38bdf8';
+          ctx.fillRect(-lw * 0.14, -1.5, 6, 3);
+
+          ctx.fillStyle = '#334155';
+          ctx.fillRect(-2, -1.5, 3, 2);
+          ctx.fillRect(3, -1.5, 3, 2);
+
+          ctx.fillStyle = '#ef4444';
+          ctx.beginPath();
+          ctx.arc(lw * 0.22, 0, 2, 0, Math.PI * 2);
+          ctx.fill();
+
+          const greenPulse = Math.sin(globalTime * 8) * 0.3 + 0.7;
+          ctx.fillStyle = `rgba(34, 197, 94, ${greenPulse})`;
+          ctx.shadowColor = '#22c55e';
+          ctx.shadowBlur = 6;
+          ctx.beginPath();
+          ctx.arc(lw * 0.29, 0, 2.4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 10;
+
+          // 3. Treatment Monitor Display
+          ctx.fillStyle = '#ffffff';
+          ctx.strokeStyle = '#cbd5e1';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.roundRect(-lw * 0.3, -lh * 0.5, lw * 0.6, lh * 0.42, 6);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#0f172a';
+          ctx.beginPath();
+          ctx.roundRect(-lw * 0.25, -lh * 0.46, lw * 0.5, lh * 0.32, 3);
+          ctx.fill();
+
+          ctx.fillStyle = '#fdba74';
+          ctx.beginPath();
+          ctx.ellipse(-lw * 0.1, -lh * 0.32, 4.5, 6.5, 0.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.ellipse(lw * 0.1, -lh * 0.32, 4.5, 6.5, -0.2, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(-lw * 0.2, -lh * 0.26);
+          ctx.lineTo(lw * 0.2, -lh * 0.26);
+          ctx.stroke();
+
+          ctx.fillStyle = '#38bdf8';
+          ctx.fillRect(-lw * 0.22, -lh * 0.44, 5, 2);
+          ctx.fillStyle = '#22c55e';
+          ctx.fillRect(lw * 0.16, -lh * 0.44, 4, 2);
+
+          // 4. Handpiece / Transducer Wand
+          ctx.fillStyle = '#94a3b8';
+          ctx.beginPath();
+          ctx.roundRect(-lw * 0.46, -lh * 0.14, lw * 0.15, lh * 0.2, 3);
+          ctx.fill();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.strokeStyle = '#cbd5e1';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.roundRect(-lw * 0.45, -lh * 0.3, lw * 0.13, lh * 0.26, [5, 5, 2, 2]);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#38bdf8';
+          ctx.beginPath();
+          ctx.arc(-lw * 0.39, -lh * 0.22, 1.5, 0, Math.PI * 2);
+          ctx.arc(-lw * 0.39, -lh * 0.15, 1.5, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1.5;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(-lw * 0.39, -lh * 0.04);
+          ctx.quadraticCurveTo(-lw * 0.36, lh * 0.1, -lw * 0.24, lh * 0.07);
+          ctx.quadraticCurveTo(-lw * 0.16, lh * 0.04, -lw * 0.14, 0);
+          ctx.stroke();
+        } else if (it.type === 'filler') {
+          // ✨ กล่อง Filler "Reva Aesthetic Clinic" (30 คะแนน)
+          const fw = it.w, fh = it.h;
+          ctx.shadowColor = '#38bdf8';
+          ctx.shadowBlur = 10;
+
+          // Back box
+          ctx.save();
+          ctx.translate(fw * 0.08, -fh * 0.1);
+          ctx.rotate(0.12);
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.roundRect(-fw * 0.44, -fh * 0.38, fw * 0.88, fh * 0.76, 4);
+          ctx.fill();
+
+          ctx.fillStyle = '#10223e';
+          ctx.beginPath();
+          ctx.moveTo(-fw * 0.44, -fh * 0.38);
+          ctx.lineTo(-fw * 0.18, -fh * 0.38);
+          ctx.lineTo(-fw * 0.44, fh * 0.1);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.fillStyle = '#b59a57';
+          ctx.fillRect(fw * 0.22, fh * 0.08, fw * 0.14, fw * 0.2);
+
+          ctx.fillStyle = '#10223e';
+          ctx.font = 'bold 7px Prompt, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('Reva', 0, -fh * 0.08);
+          ctx.restore();
+
+          // Front box
+          ctx.save();
+          ctx.rotate(-0.06);
+
+          const boxGrad = ctx.createLinearGradient(-fw * 0.45, -fh * 0.45, fw * 0.45, fh * 0.45);
+          boxGrad.addColorStop(0, '#162a4a');
+          boxGrad.addColorStop(0.5, '#0e1e36');
+          boxGrad.addColorStop(1, '#091424');
+          ctx.fillStyle = boxGrad;
+          ctx.beginPath();
+          ctx.roundRect(-fw * 0.46, -fh * 0.42, fw * 0.92, fh * 0.84, 5);
+          ctx.fill();
+          ctx.strokeStyle = '#223c63';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+
+          ctx.fillStyle = '#a5f3fc';
+          ctx.fillRect(-fw * 0.32, -fh * 0.36, fw * 0.1, fh * 0.72);
+
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '900 11px Prompt, sans-serif';
+          ctx.textAlign = 'left';
+          ctx.fillText('Reva', -fw * 0.15, -fh * 0.02);
+
+          ctx.fillStyle = '#94a3b8';
+          ctx.font = '500 5px Prompt, sans-serif';
+          ctx.fillText('Aesthetic Clinic', -fw * 0.14, fh * 0.14);
+
+          const goldGrad = ctx.createLinearGradient(fw * 0.2, fh * 0.08, fw * 0.38, fh * 0.3);
+          goldGrad.addColorStop(0, '#fef08a');
+          goldGrad.addColorStop(0.5, '#ca8a04');
+          goldGrad.addColorStop(1, '#854d0e');
+          ctx.fillStyle = goldGrad;
+          ctx.beginPath();
+          ctx.roundRect(fw * 0.18, fh * 0.08, fw * 0.18, fh * 0.22, 2);
+          ctx.fill();
+
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+          ctx.beginPath();
+          ctx.moveTo(-fw * 0.46, -fh * 0.42);
+          ctx.lineTo(fw * 0.2, -fh * 0.42);
+          ctx.lineTo(-fw * 0.46, fh * 0.3);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.restore();
+        } else {
+          // 💉 กล่อง Botox "Reva Aesthetic Clinic" & ขวดไวอัล (10 คะแนน)
+          const bw = it.w, bh = it.h;
+          ctx.shadowColor = '#0284c7';
+          ctx.shadowBlur = 12;
+
+          // 1. Reva Cyan Box
+          const boxX = -bw * 0.12;
+          const boxY = -bh * 0.46;
+          const boxW = bw * 0.58;
+          const boxH = bh * 0.92;
+
+          const bGrad = ctx.createLinearGradient(boxX, boxY, boxX + boxW, boxY + boxH);
+          bGrad.addColorStop(0, '#38bdf8');
+          bGrad.addColorStop(0.3, '#0284c7');
+          bGrad.addColorStop(1, '#0369a1');
+          ctx.fillStyle = bGrad;
+          ctx.beginPath();
+          ctx.roundRect(boxX, boxY, boxW, boxH, 4);
+          ctx.fill();
+
+          ctx.strokeStyle = '#7dd3fc';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '900 11px Prompt, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('Reva', boxX + boxW * 0.5, boxY + boxH * 0.52);
+
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+          ctx.font = '500 4.5px Prompt, sans-serif';
+          ctx.fillText('Aesthetic Clinic', boxX + boxW * 0.5, boxY + boxH * 0.34);
+
+          // 2. Botox Glass Vial
+          const vialX = -bw * 0.38;
+          const vialY = bh * 0.05;
+          const vialW = bw * 0.28;
+          const vialH = bh * 0.42;
+
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+          ctx.beginPath();
+          ctx.ellipse(vialX + vialW * 0.5, vialY + vialH, vialW * 0.5, 3, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.roundRect(vialX, vialY, vialW, vialH, [2, 2, 4, 4]);
+          ctx.fill();
+          ctx.strokeStyle = '#94a3b8';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+
+          ctx.fillStyle = '#0284c7';
+          ctx.fillRect(vialX, vialY + vialH * 0.22, vialW, vialH * 0.35);
+
+          ctx.fillStyle = '#e2e8f0';
+          ctx.strokeStyle = '#94a3b8';
+          ctx.lineWidth = 0.8;
+          ctx.beginPath();
+          ctx.roundRect(vialX + vialW * 0.12, vialY - vialH * 0.26, vialW * 0.76, vialH * 0.26, 1.5);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#1e3a8a';
+          ctx.beginPath();
+          ctx.roundRect(vialX + vialW * 0.05, vialY - vialH * 0.38, vialW * 0.9, vialH * 0.16, 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // 4. Draw Ghost Obstacles (👻 ผีลอยอยู่ สิ่งกีดขวาง -10 คะแนน)
+      for (const g of ghosts) {
+        ctx.save();
+        ctx.translate(g.x, g.y);
+        if (g.dir === -1) ctx.scale(-1, 1);
+
+        const gw = g.w, gh = g.h;
+        const tailWiggle = Math.sin(globalTime * 7 + g.phase) * 5;
+
+        ctx.shadowColor = '#a855f7';
+        ctx.shadowBlur = 14;
+
+        ctx.fillStyle = 'rgba(241, 245, 249, 0.92)';
+        ctx.beginPath();
+        ctx.arc(0, -gh * 0.18, gw * 0.42, Math.PI, 0);
+        ctx.lineTo(gw * 0.42, gh * 0.28);
+        ctx.quadraticCurveTo(gw * 0.22, gh * 0.42 + tailWiggle, 0, gh * 0.28);
+        ctx.quadraticCurveTo(-gw * 0.22, gh * 0.42 - tailWiggle, -gw * 0.42, gh * 0.28);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(-gw * 0.38, gh * 0.04, 4, 0, Math.PI * 2);
+        ctx.arc(gw * 0.38, gh * 0.04, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#581c87';
+        ctx.beginPath();
+        ctx.arc(-6, -gh * 0.16, 3, 0, Math.PI * 2);
+        ctx.arc(6, -gh * 0.16, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#3b0764';
+        ctx.beginPath();
+        ctx.ellipse(0, -gh * 0.04, 3.5, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#ef4444';
+        ctx.font = 'bold 9px Prompt, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('-10', 0, gh * 0.2);
+
+        ctx.restore();
+      }
+
+      // 5. Draw Dracula Doctor
+      const dw = doctor.width, dh = doctor.height;
+      ctx.save();
+      ctx.translate(doctor.x, doctor.y);
+      ctx.rotate(doctor.tilt);
+
+      // Cape
+      const capeFlutter = Math.sin(doctor.capePhase) * 6;
+      ctx.fillStyle = '#0f051d';
+      ctx.beginPath();
+      ctx.moveTo(-dw * 0.42, -dh * 0.2);
+      ctx.lineTo(-dw * 0.58 + capeFlutter, dh * 0.55);
+      ctx.lineTo(0, dh * 0.45);
+      ctx.lineTo(dw * 0.58 + capeFlutter, dh * 0.55);
+      ctx.lineTo(dw * 0.42, -dh * 0.2);
+      ctx.closePath();
+      ctx.fill();
+
+      // Cape Collar
+      ctx.fillStyle = '#b91c1c';
+      ctx.beginPath();
+      ctx.moveTo(-dw * 0.38, -dh * 0.28);
+      ctx.lineTo(-dw * 0.2, -dh * 0.05);
+      ctx.lineTo(dw * 0.2, -dh * 0.05);
+      ctx.lineTo(dw * 0.38, -dh * 0.28);
+      ctx.closePath();
+      ctx.fill();
+
+      // Doctor Coat
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath();
+      ctx.ellipse(0, dh * 0.18, dw * 0.32, dh * 0.32, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Stethoscope
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-dw * 0.18, -dh * 0.02);
+      ctx.quadraticCurveTo(-dw * 0.08, dh * 0.28, 0, dh * 0.28);
+      ctx.quadraticCurveTo(dw * 0.08, dh * 0.28, dw * 0.18, -dh * 0.02);
+      ctx.stroke();
+
+      // Head
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.ellipse(0, -dh * 0.18, dw * 0.24, dh * 0.22, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Slick hair
+      ctx.fillStyle = '#09090b';
+      ctx.beginPath();
+      ctx.arc(0, -dh * 0.24, dw * 0.24, Math.PI * 0.9, Math.PI * 2.1);
+      ctx.lineTo(0, -dh * 0.18);
+      ctx.closePath();
+      ctx.fill();
+
+      // Head mirror
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.arc(-dw * 0.12, -dh * 0.28, 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Vampire eyes & fangs
+      ctx.fillStyle = '#b91c1c';
+      ctx.beginPath();
+      ctx.arc(-5.5, -dh * 0.18, 2, 0, Math.PI * 2);
+      ctx.arc(5.5, -dh * 0.18, 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(-3, -dh * 0.11); ctx.lineTo(-2, -dh * 0.07); ctx.lineTo(-1, -dh * 0.11);
+      ctx.moveTo(1, -dh * 0.11); ctx.lineTo(2, -dh * 0.07); ctx.lineTo(3, -dh * 0.11);
+      ctx.fill();
+
+      if (doctor.damageFlash > 0) {
+        ctx.strokeStyle = 'rgba(239, 68, 68, 0.9)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, dw * 0.52, dh * 0.6, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // 6. Draw Tether & Skeletal Claw
+      const startX = doctor.x;
+      const startY = ledgeY - 4;
+      const endX = tether.x;
+      const endY = tether.y;
+
+      ctx.save();
+      const tetherGrad = ctx.createLinearGradient(startX, startY, endX, endY);
+      tetherGrad.addColorStop(0, '#f97316');
+      tetherGrad.addColorStop(0.5, '#c084fc');
+      tetherGrad.addColorStop(1, '#38bdf8');
+
+      ctx.strokeStyle = tetherGrad;
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = '#c084fc';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(endX, endY);
+      ctx.stroke();
+
+      // Claw
+      ctx.translate(endX, endY);
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath();
+      ctx.arc(0, 0, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      const gripAngle = tether.caughtItem ? 0.2 : Math.sin(tether.pulse) * 0.25 + 0.5;
+      ctx.strokeStyle = '#f8fafc';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(0, 4); ctx.lineTo(0, 14); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-4, 2); ctx.lineTo(-8 - gripAngle * 8, 11); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(4, 2); ctx.lineTo(8 + gripAngle * 8, 11); ctx.stroke();
+      ctx.restore();
+
+      // 7. Particles
+      for (const p of particles) {
+        ctx.save();
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // 8. Texts
+      for (const t of texts) {
+        ctx.save();
+        ctx.font = 'bold 15px Prompt, sans-serif';
+        ctx.fillStyle = t.color;
+        ctx.shadowColor = 'rgba(0,0,0,0.8)';
+        ctx.shadowBlur = 6;
+        ctx.textAlign = 'center';
+        ctx.globalAlpha = Math.max(0, t.life);
+        ctx.fillText(t.text, t.x, t.y);
+        ctx.restore();
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>

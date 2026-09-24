@@ -1,0 +1,7 @@
+{
+  "name": "เกมตกปลา 2D (Ocean Fishing 2D)",
+  "description": "เกมตกปลา 2D เล่นบนมือถือแนวตั้ง แตะเพื่อหย่อนเบ็ด ตกปลาเล็ก ปลาใหญ่ ปลาทอง ฉลามตัวไว (+100) และหลบขยะ จับเวลา 60 วินาที",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
